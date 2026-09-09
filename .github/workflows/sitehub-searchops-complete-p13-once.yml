@@ -1,0 +1,53 @@
+name: SiteHub SearchOps complete p13 once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sitehub-searchops-complete-p13-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Complete SearchOps contract
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          root='https://tsample.suaveforge.com/'
+          p=Path('frontend/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'sitehub-searchops-p13-head' not in s:
+            block='''\n  <!-- sitehub-searchops-p13-head -->\n  <script type="application/ld+json">'''+json.dumps({
+              '@context':'https://schema.org','@type':'WebApplication','name':'TSAMPLE 유아동 기질검사 자동 채점','url':root,
+              'description':'Google Form 제출을 감지해 유아동 기질검사 응답을 검증·채점하고 PDF 결과지를 생성하는 자동화 서비스입니다.',
+              'applicationCategory':'BusinessApplication','creator':{'@type':'Organization','name':'SuaveForge','url':'https://suaveforge.com/'},
+              'isPartOf':{'@type':'WebSite','name':'SuaveForge','url':'https://suaveforge.com/'}
+            },ensure_ascii=False,separators=(',',':'))+'''</script>\n'''
+            s=s.replace('</head>',block+'</head>',1)
+          if 'sitehub-searchops-p13-content' not in s:
+            block='''\n  <!-- sitehub-searchops-p13-content -->\n  <section data-sitehub-searchops="p13" aria-label="TSAMPLE 서비스 안내" style="max-width:1100px;margin:32px auto;padding:20px 24px;line-height:1.65">\n    <h2>TSAMPLE은 무엇을 자동화하나요?</h2>\n    <p>학부모의 Google Form 제출을 감지해 응답 검증, 기질검사 채점, 결과 PDF 생성까지 한 흐름으로 처리합니다.</p>\n    <h3>어떻게 사용하나요?</h3>\n    <p>테스트 Google Form을 제출한 뒤 대시보드에서 처리 상태와 결과를 확인합니다. 공개 화면에서는 아동 이름을 마스킹합니다.</p>\n    <p><strong>운영 및 지원:</strong> SuaveForge가 서비스와 자동화 흐름을 운영·지원합니다.</p>\n  </section>\n'''
+            s=s.replace('</body>',block+'</body>',1)
+          p.write_text(s,encoding='utf-8')
+          Path('frontend/robots.txt').write_text('User-agent: *\nAllow: /\nSitemap: https://tsample.suaveforge.com/sitemap.xml\n',encoding='utf-8')
+          Path('frontend/sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://tsample.suaveforge.com/</loc><lastmod>2026-09-09</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url></urlset>\n',encoding='utf-8')
+      - name: Validate and commit
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          grep -q 'application/ld+json' frontend/index.html
+          grep -q 'data-sitehub-searchops="p13"' frontend/index.html
+          grep -q 'Sitemap: https://tsample.suaveforge.com/sitemap.xml' frontend/robots.txt
+          git config user.name 'SuaveForge SiteHub'
+          git config user.email '53187583+programmer119@users.noreply.github.com'
+          git add frontend/index.html frontend/robots.txt frontend/sitemap.xml
+          git commit -m 'Apply SiteHub SearchOps p13'
+          git push origin HEAD:main
